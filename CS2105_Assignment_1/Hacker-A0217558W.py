@@ -1,3 +1,4 @@
+from http import client
 from socket import *
 import sys, hashlib, time
 
@@ -19,7 +20,9 @@ def main():
     print("connection established")
     student_key = sys.argv[1]
     if (handshake(student_key)):
-        try_password()
+        while (password < 10000):
+            try_password()
+
         print("--------- %s seconds ------------" % (time.time() - start_time))
     else :
         print("handshake failed")
@@ -44,6 +47,7 @@ def try_password():
             print('password is: ', fourDigit)
             file = getFile()
             print("file retrieved: ", hashlib.md5(file).hexdigest())
+            send_hash(file)
             logoutFile()
             
         elif (response == '403_'):
@@ -51,8 +55,20 @@ def try_password():
         else:
             print("ERR: unexpected response in stage 1: ", response)
             print("ERR: curr iteration: ", i)
+            password = i
             break
     print("------------- bruteforced in %s seconds--------------" % (time.time() - start_time)) 
+
+def send_hash(file):
+    hash = hashlib.md5(file).hexdigest()
+    msg = ('PUT__' + hash).encode()
+    clientSocket.send(msg)
+    code = getResponseCode()
+    if (code == '203_'):
+        hashlib.md5(readLength(extractLength())).hexdigest()
+    else:
+        print("ERR: sent has invalid, server returned ", code)
+    
 
 def logoutFile():
     print('logging out')
