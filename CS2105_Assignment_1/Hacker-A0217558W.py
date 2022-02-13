@@ -39,7 +39,7 @@ def try_password():
         if (response == '201_'):
             print('password is: ', fourDigit)
             file = getFile()
-            
+
         elif (response == '403_'):
             continue
         else:
@@ -88,5 +88,5 @@ def getResponseCode():
     return m.decode()
 
 if __name__ == "__main__":
-    #main()
-    try_password()
+    main()
+    #try_password()
