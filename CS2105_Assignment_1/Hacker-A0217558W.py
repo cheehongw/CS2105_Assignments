@@ -1,11 +1,10 @@
-from http import client
 from socket import *
-import sys
+import sys, hashlib, time
 
 targetServer = "137.132.92.111"
 serverPort = 4444
 student_id = 283974
-clientSocket = ''
+clientSocket = socket(AF_INET, SOCK_STREAM) 
 password = 0
 
 def main():
@@ -14,12 +13,16 @@ def main():
         print("expected 1 argument!")
         return
 
-    clientSocket = socket(AF_INET, SOCK_STREAM)
+    #clientSocket = socket(AF_INET, SOCK_STREAM)
+    start_time = time.time()
     clientSocket.connect((targetServer, serverPort))
     print("connection established")
     student_key = sys.argv[1]
-    if (handshake(student_key, clientSocket)):
-        return #something
+    if (handshake(student_key)):
+        try_password()
+        print("--------- %s seconds ------------" % (time.time() - start_time))
+    else :
+        print("handshake failed")
         
 
 def handshake(student_key):
@@ -31,6 +34,7 @@ def handshake(student_key):
     return reply == '200_'
 
 def try_password():
+    start_time = time.time()
     for i in range(password, 10000):
         fourDigit = '{0:04}'.format(i)
         m = ('LGIN_' + fourDigit).encode()
@@ -39,11 +43,24 @@ def try_password():
         if (response == '201_'):
             print('password is: ', fourDigit)
             file = getFile()
-
+            print("file retrieved: ", hashlib.md5(file).hexdigest())
+            logoutFile()
+            
         elif (response == '403_'):
             continue
         else:
-            print("unexpected response in stage 1:", response)
+            print("ERR: unexpected response in stage 1: ", response)
+            print("ERR: curr iteration: ", i)
+            break
+    print("------------- bruteforced in %s seconds--------------" % (time.time() - start_time)) 
+
+def logoutFile():
+    print('logging out')
+    clientSocket.send('LOUT_'.encode())
+    if (getResponseCode() == '202_'):
+        print('server: Logout successful, now in State 1')
+    else:
+        print('ERR: logout failed')
 
 def getFile():
     clientSocket.send('GET__'.encode())
@@ -53,7 +70,6 @@ def getFile():
         length = extractLength()
         print("server: file length is", length)
         file = readLength(length)
-        print("file retrieved")
         return file
     else:
         return
@@ -66,7 +82,7 @@ def readLength(length):
         packetSize = packetSize - len(msg)
         packet = packet + msg
 
-    return packet.decode()
+    return packet
 
 def extractLength():
     buffer = b''
