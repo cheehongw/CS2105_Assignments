@@ -46,11 +46,18 @@ def handshake(student_key):
     return reply == '200_'
 
 def try_password():
-    global password
+    global password, passed
     print("SYSTEM: Starting with ", password)
     start_time = time.time()
     
     for i in range(password, 10000):
+        
+        if (passed == 8):
+            password = 10000
+            print("SUCCESS: Finished")
+            bye()
+            break 
+
         password += 1
         fourDigit = '{0:04}'.format(i)
         m = ('LGIN_' + fourDigit).encode()
@@ -74,6 +81,10 @@ def try_password():
             
     print("------------- bruteforced in %s seconds--------------" % (time.time() - start_time)) 
 
+def bye():
+    msg = 'BYE__'
+    clientSocket.send(msg.encode())
+
 def send_hash(hash):
     global passed
     msg = ('PUT__' + hash).encode()
@@ -91,7 +102,7 @@ def send_hash(hash):
     
 
 def logoutFile():
-    print('SYSTEM: logging out')
+    #print('SYSTEM: logging out')
     clientSocket.send('LOUT_'.encode())
     if (getResponseCode() == '202_'):
         print('SYSTEM: Logout successful, now in State 1 \n')
