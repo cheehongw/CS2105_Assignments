@@ -7,7 +7,7 @@ def main():
         print("expected 5 arguments!")
         return -1
 
-    student_key = "283974" #TODO change this back
+    student_key = sys.argv[1] #"283974" 
     mode = int(sys.argv[2])
     ip_address = sys.argv[3]
     port_num = int(sys.argv[4])
