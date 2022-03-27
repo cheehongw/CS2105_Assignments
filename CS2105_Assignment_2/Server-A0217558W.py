@@ -7,7 +7,7 @@ def main():
         print("expected 5 arguments!")
         return -1
 
-    student_key = "283974" #TODO change this back
+    student_key = sys.argv[1] #"283974" #TODO change this back
     mode = int(sys.argv[2])
     ip_address = sys.argv[3]
     port_num = int(sys.argv[4])
@@ -21,8 +21,10 @@ def connect_to_simulator(student_key, mode, ip_address, port, file_name):
     serverSocket.connect((ip_address, port))
     handshake_message = ("STID_" + student_key + "_S").encode()
     serverSocket.send(handshake_message)
+    print("SERVER: ", handshake_message)
     reply = 99
     while (reply != 0):
+        print("Server: Listening to queue num")
         reply = extractQueueNum(serverSocket)
         print("Server queue num:", reply)
 
@@ -37,13 +39,27 @@ def connect_to_simulator(student_key, mode, ip_address, port, file_name):
         raise Exception("FATAL ERROR - UNKNOWN MODE")
 
 def send_file_0(serverSocket, file_name):
-    file_bytes = open_file(file_name)
-    print("SERVER: Expecting to send " + str(len(file_bytes)) + " bytes")
+    filesize = os.path.getsize(file_name)
+    print("SERVER: Expecting to send " + str(filesize) + " bytes")
+    f = open(file_name, "rb")
+    last_seq_num = -(filesize // -1016)
+    count = 0
+    while (filesize > 0):
+        count += 1
+        islastPacket = count == last_seq_num
+        payload = f.read(1016)
+        filesize -= len(payload)
+        packet = append_header_0(payload, islastPacket, len(payload))
+        serverSocket.sendall(packet)
     
-    packet = append_header_0(file_bytes)
-    serverSocket.sendall(packet)
     print("Server: Finished sending file")
+    f.close()
     serverSocket.close()
+
+
+def append_header_0(payload, islastPacket, packetSize):
+    length_header = struct.pack("?I", islastPacket, packetSize)
+    return pad_to_n(length_header + payload, 1024)
 
 def send_file_1(serverSocket, file_name):
     filesize = os.path.getsize(file_name)
@@ -57,7 +73,7 @@ def send_file_1(serverSocket, file_name):
     d = {}
     while (filesize > 0 or d):
 
-        if(len(d) < 10):
+        if(len(d) < 20):
             payload = f.read(1000)
             filesize -= len(payload) #something wrong
             packet = append_header_1(payload, seq_num, last_seq_num)
@@ -65,7 +81,7 @@ def send_file_1(serverSocket, file_name):
             serverSocket.sendall(packet)
             seq_num += 1
         
-        if (len(d) >= 10):
+        if (len(d) >= 20):
             result = recv_ack(serverSocket, seq_num)
             if (result == last_seq_num + 1):
                 break
@@ -78,7 +94,9 @@ def send_file_1(serverSocket, file_name):
         
         #print(filesize, len(d))
     
-   
+    serverSocket.close()
+    f.close()
+
 
 def recv_ack(serverSocket, seq_num):
     packet = readLength(64, serverSocket)
@@ -135,10 +153,6 @@ def open_file(file_name):
     print("SERVER" + file_name + " hash: " + hashlib.md5(file_bytes).hexdigest())
     f.close()
     return file_bytes
-
-def append_header_0(payload):
-    length_header = (str(len(payload)) + "_").encode()
-    return pad_to_n(length_header + payload, 1024)
     
 def pad_to_n(packet, n):
     size = len(packet)

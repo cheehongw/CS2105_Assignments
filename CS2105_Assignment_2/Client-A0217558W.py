@@ -13,9 +13,9 @@ def main():
     port_num = int(sys.argv[4])
     file_name = sys.argv[5]
 
-    if os.path.exists(file_name): #TODO remove this afterwards
-        print("deleting old file")
-        os.remove(file_name)
+    # if os.path.exists(file_name): #TODO remove this afterwards
+    #     print("deleting old file")
+    #     os.remove(file_name)
 
     connect_to_simulator(student_key, mode, ip_address, port_num, file_name)
 
@@ -26,12 +26,14 @@ def connect_to_simulator(student_key, mode, ip_address, port, file_name):
     clientSocket.connect((ip_address, port))
     handshake_message = ("STID_" + student_key + "_C").encode()
     clientSocket.send(handshake_message)
+    print("CLIENT: ", handshake_message)
     reply = 99
     while (reply != 0):
+        print("Client: Listening to queue num")
         reply = extractNumFromBuffer(clientSocket)
         print("Client queue num:", reply)
 
-
+    print("Client: Beginning!")
     if (mode == 0):
         recv_file_0(clientSocket, file_name)
     elif (mode == 1):
@@ -43,15 +45,18 @@ def connect_to_simulator(student_key, mode, ip_address, port, file_name):
 
 
 def recv_file_0(clientSocket, file_name):
-    first_packet_flag = True
     f = open(file_name, "ab+")
-    packetSize = extractNumFromBuffer(clientSocket)
-    payload = readLength(packetSize, clientSocket)
-        
-    f.write(payload)
 
-    f.seek(0)
-    print("Client hash: " + hashlib.md5(f.read()).hexdigest())
+    while (True):
+        header = readLength(8, clientSocket)
+        islastPacket, payload_size = struct.unpack("?I", header)
+        payload = readLength(1016, clientSocket)
+        f.write(payload[:payload_size])
+        if (islastPacket):
+            break
+
+    #f.seek(0)
+    #print("Client hash: " + hashlib.md5(f.read()).hexdigest())
     f.close()
     clientSocket.close()
 
@@ -65,7 +70,7 @@ def recv_file_1(clientSocket, file_name):
     packets_recv = 0
 
     while (True):
-        if (packets_recv < 10): #keep reading the next 10 packets
+        if (packets_recv < 20): #keep reading the next 20 packets
             packets_recv += 1
             #print("Client: packets received: ", packets_recv)
             checksum = readLength(4, clientSocket)
@@ -92,14 +97,11 @@ def recv_file_1(clientSocket, file_name):
                 next_expected_seq_num += 1
             
             packets_recv = 0
-            print("Client: next expected seq num: ", next_expected_seq_num)
+            # print("Client: next expected seq num: ", next_expected_seq_num)
             send_ack(clientSocket, next_expected_seq_num)
             if (next_expected_seq_num == last_seq + 1):
-                send_ack(clientSocket, next_expected_seq_num)
-                send_ack(clientSocket, next_expected_seq_num)
-                send_ack(clientSocket, next_expected_seq_num)
-                send_ack(clientSocket, next_expected_seq_num)
-                send_ack(clientSocket, next_expected_seq_num)
+                for i in range(10):
+                    send_ack(clientSocket, next_expected_seq_num)
                 break
     
     f.seek(0)
