@@ -7,15 +7,11 @@ def main():
         print("expected 5 arguments!")
         return -1
 
-    student_key = sys.argv[1] #"283974" 
+    student_key = sys.argv[1]
     mode = int(sys.argv[2])
     ip_address = sys.argv[3]
     port_num = int(sys.argv[4])
     file_name = sys.argv[5]
-
-    # if os.path.exists(file_name): #TODO remove this afterwards
-    #     print("deleting old file")
-    #     os.remove(file_name)
 
     connect_to_simulator(student_key, mode, ip_address, port_num, file_name)
 
@@ -70,15 +66,11 @@ def recv_file_1(clientSocket, file_name):
     packets_recv = 0
 
     while (True):
-        if (packets_recv < 20): #keep reading the next 20 packets
+        if (packets_recv < 1000): #keep reading the next 100 packets
             packets_recv += 1
-            #print("Client: packets received: ", packets_recv)
             checksum = readLength(4, clientSocket)
             rest = readLength(1020, clientSocket)
-            # print(checksum)
-            # print(struct.unpack("I", checksum)[0])
-            # print(zlib.crc32(rest))
-            # break
+
             if (struct.unpack("I", checksum)[0] == zlib.crc32(rest)):
                 count += 1 #record receipt of well-formed packet
                 header, payload = rest[:20], rest[20:]
@@ -97,27 +89,22 @@ def recv_file_1(clientSocket, file_name):
                 next_expected_seq_num += 1
             
             packets_recv = 0
-            # print("Client: next expected seq num: ", next_expected_seq_num)
+            #print("Client: next expected seq num: ", next_expected_seq_num)
             send_ack(clientSocket, next_expected_seq_num)
             if (next_expected_seq_num == last_seq + 1):
-                for i in range(10):
+                for i in range(20):
                     send_ack(clientSocket, next_expected_seq_num)
                 break
-    
-    f.seek(0)
-    print("Client hash: " + hashlib.md5(f.read()).hexdigest())
+
     f.close()
     clientSocket.close()
-    
-    
 
-            
+
 def send_ack(clientSocket, seq_num):
     header = struct.pack("Q", seq_num)
     padded = pad_to_n(header, 60)
     checksum = struct.pack("I", zlib.crc32(padded))
     clientSocket.sendall(checksum + padded)
-    
 
 
 def recv_file_2(clientSocket, file_name):
@@ -125,6 +112,7 @@ def recv_file_2(clientSocket, file_name):
     f = open(file_name, "ab+")
     count = 0
     next_expected_seq_num = 1
+    largest_len = len(d)
 
     while (True):
         count += 1
@@ -133,6 +121,7 @@ def recv_file_2(clientSocket, file_name):
         payload = readLength(payload_size, clientSocket)
         padding = readLength(1004 - payload_size, clientSocket)
         d[seq_num] = payload
+        largest_len = len(d) if len(d) > largest_len else largest_len
         if (next_expected_seq_num == seq_num):
             while (next_expected_seq_num in d):
                 payload = d.pop(next_expected_seq_num)
@@ -142,6 +131,7 @@ def recv_file_2(clientSocket, file_name):
         if (count == last_seq_num):
             break
 
+    print("Client: largest length: ", largest_len)
     f.seek(0)
     print("Client hash: " + hashlib.md5(f.read()).hexdigest())
     f.close()

@@ -67,13 +67,11 @@ def send_file_1(serverSocket, file_name):
     print("Server: last seq num: ", last_seq_num)
 
     f = open(file_name, "rb")
-    print("Server hash: " + hashlib.md5(f.read()).hexdigest())
-    f.seek(0)
     seq_num = 1
     d = {}
     while (filesize > 0 or d):
 
-        if(len(d) < 20):
+        if(len(d) < 1000):
             payload = f.read(1000)
             filesize -= len(payload) #something wrong
             packet = append_header_1(payload, seq_num, last_seq_num)
@@ -81,7 +79,7 @@ def send_file_1(serverSocket, file_name):
             serverSocket.sendall(packet)
             seq_num += 1
         
-        if (len(d) >= 20):
+        if (len(d) >= 1000):
             result = recv_ack(serverSocket, seq_num)
             if (result == last_seq_num + 1):
                 break
@@ -131,6 +129,8 @@ def send_file_2(serverSocket, file_name):
         packet = append_header_2(payload, seq_num, last_seq_num)
         serverSocket.sendall(packet)
         seq_num += 1
+        if (seq_num % 1500 == 0):
+            time.sleep(0.05)
 
     f.seek(0)
     print("Server hash: " + hashlib.md5(f.read()).hexdigest())
