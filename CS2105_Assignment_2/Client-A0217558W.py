@@ -132,8 +132,6 @@ def recv_file_2(clientSocket, file_name):
             break
 
     print("Client: largest length: ", largest_len)
-    f.seek(0)
-    print("Client hash: " + hashlib.md5(f.read()).hexdigest())
     f.close()
     clientSocket.close()
 

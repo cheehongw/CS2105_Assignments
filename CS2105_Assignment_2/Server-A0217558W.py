@@ -130,10 +130,8 @@ def send_file_2(serverSocket, file_name):
         serverSocket.sendall(packet)
         seq_num += 1
         if (seq_num % 1500 == 0):
-            time.sleep(0.05)
+            time.sleep(0.08)
 
-    f.seek(0)
-    print("Server hash: " + hashlib.md5(f.read()).hexdigest())
     f.close()
     print("Server: Finished sending file")
     serverSocket.close()
@@ -145,14 +143,6 @@ def append_header_2(payload, seq_num, last_seq_num): #20 bytes header
     packet = header + payload
     return pad_to_n(packet, 1024)
 
-
-
-def open_file(file_name):
-    f = open(file_name, "rb")
-    file_bytes = f.read()
-    print("SERVER" + file_name + " hash: " + hashlib.md5(file_bytes).hexdigest())
-    f.close()
-    return file_bytes
     
 def pad_to_n(packet, n):
     size = len(packet)
