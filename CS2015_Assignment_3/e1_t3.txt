@@ -1,0 +1,11 @@
+Based off the url provided, we can deduce the host name. Thus, we can set the capture filter to the following:  host monterosa.d2.comp.nus.edu.sg
+
+The steps involved in the download procedure using such a HTTP based protocol are:
+
+1. Client initiates 3-way handshake to establish TCP channel with server.
+2. After TCP channel is established, client sends HTTP GET request over channel.
+3. The server responds with the HTTP 200 OK message and requested file.
+4. Client replies to the server with acknowledgement upon receiving the TCP packet successfully.
+5. The server closes the connection by sending a TCP packet with the FIN bit set.
+6. Client acknowledges the FIN and closes the socket connection.
+
