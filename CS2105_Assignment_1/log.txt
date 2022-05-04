@@ -1,4 +1,4 @@
-Hi, A0217558W you cracked 8 passwords
+Hi, you cracked 8 passwords
 Connected to ('192.168.49.37', 60742)
 (1) Server State 1 :Successful handshake
 (1) Server State 1 :Invalid Password
