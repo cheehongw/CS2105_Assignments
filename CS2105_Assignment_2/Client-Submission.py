@@ -1,3 +1,11 @@
+'''
+    Module: CS2105
+    Semester: AY21/22 S2
+    File name: Client-Submission.py
+    Author: Wong Chee Hong
+    Python Version: 3.7
+'''
+
 from socket import *
 import os, sys, hashlib, time, struct, zlib
 
